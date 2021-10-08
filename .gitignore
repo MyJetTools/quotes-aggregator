@@ -5,3 +5,5 @@ Cargo.lock
 /node_modules
 /JavaScript
 .DS_Store
+
+docker.io/myjettools/price-mixer

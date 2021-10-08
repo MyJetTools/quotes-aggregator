@@ -16,7 +16,7 @@ async fn main() {
     .collect::<Vec<BidAskTcpServer>>();
 
     let mut pure_client = MyServiceBusClient::new(
-        "127.0.0.1:6421",
+        settings.sb_url.as_str(),
         "rust_price_mixer",
         "1.0.0",
         Duration::new(3, 0),

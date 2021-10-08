@@ -3,8 +3,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
-    #[serde(rename = "mapping")]
-    pub lps: Vec<LpConfig>
+    #[serde(rename = "lps")]
+    pub lps: Vec<LpConfig>,
+
+    #[serde(rename = "sb_url")]
+    pub sb_url: String
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
