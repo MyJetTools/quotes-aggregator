@@ -7,7 +7,6 @@ use tokio::{fs, sync::mpsc::UnboundedReceiver};
 
 #[tokio::main]
 async fn main() {
-
     let settings = parse_settings().await;
 
     let bid_ask_servers = settings.lps.iter().map(|lp| {
@@ -84,9 +83,9 @@ fn parse_message(mess: &String) -> BidAskMessage {
 
     BidAskMessage {
         id: message[0].into(),
-        datetime: Some(parse_date(message[1].into())),
-        bid: message[2].parse::<f64>().unwrap(),
-        ask: message[3].parse::<f64>().unwrap(),
+        datetime: Some(parse_date(message[3].into())),
+        bid: message[1].parse::<f64>().unwrap(),
+        ask: message[2].parse::<f64>().unwrap(),
     }
 }
 
