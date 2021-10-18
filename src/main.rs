@@ -64,10 +64,10 @@ async fn handle_event(mut rx: UnboundedReceiver<LpBidAsk>, sb_client: Arc<MyServ
         let mut instrument_metrics: HashMap<String, GenericCounter<AtomicF64>> = HashMap::new();
 
         loop {
-            let line = rx.try_recv();
-
-            if !line.is_ok() && messages.len() <= 100 {
-                let bidask = line.unwrap();
+            let bidask = rx.recv().await.unwrap();
+            // !line.is_ok() &&
+            if  messages.len() <= 100 {
+                // let bidask = line.unwrap();
                 let sb_contract = parse_message(&bidask.message);
 
 
