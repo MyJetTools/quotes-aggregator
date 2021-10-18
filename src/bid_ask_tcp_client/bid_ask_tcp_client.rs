@@ -83,7 +83,7 @@ impl BidAskTcpServer {
         }
 
         loop {
-            let socket = TcpStream::connect(self.hostport.as_str()).await.unwrap();
+            let socket = TcpStream::connect(self.hostport.as_str()).await.expect(format!("Cant connect to lp socket into: {}", self.hostport));
             let (rd, _) = io::split(socket);
             let mut reader = QuotesReader::new(rd);
 
