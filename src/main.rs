@@ -2,7 +2,7 @@ use chrono::{NaiveDateTime};
 use my_no_sql_tcp_reader::{MyNoSqlDataReader, MyNoSqlTcpConnection};
 use my_service_bus_tcp_client::MyServiceBusClient;
 use prometheus::core::{AtomicF64, GenericCounter};
-use quotes_mixer::{BclDateTime, BidAskMessage, BidAskTcpServer, Metrics, NoSqlInstrumentModel, Settings, http_start};
+use quotes_mixer::{BclDateTime, BidAskMessage, BidAskTcpServer, LpBidAsk, Metrics, NoSqlInstrumentModel, Settings, http_start};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use stopwatch::Stopwatch;
 use tokio::{fs, sync::mpsc::UnboundedReceiver};
@@ -56,7 +56,7 @@ async fn main() {
     }
 }
 
-async fn handle_event(mut rx: UnboundedReceiver<(String, String)>, sb_client: Arc<MyServiceBusClient>, metrics: Arc<Metrics>, instruments_reader: Arc<MyNoSqlDataReader<NoSqlInstrumentModel>>) {
+async fn handle_event(mut rx: UnboundedReceiver<LpBidAsk>, sb_client: Arc<MyServiceBusClient>, metrics: Arc<Metrics>, instruments_reader: Arc<MyNoSqlDataReader<NoSqlInstrumentModel>>) {
     loop {
         let sw_process = Stopwatch::start_new();
 
@@ -67,8 +67,8 @@ async fn handle_event(mut rx: UnboundedReceiver<(String, String)>, sb_client: Ar
             let line = rx.try_recv();
 
             if !line.is_ok() && messages.len() <= 100 {
-                let (lp_name, mess) = &line.unwrap();
-                let sb_contract = parse_message(mess);
+                let bidask = line.unwrap();
+                let sb_contract = parse_message(&bidask.message);
 
 
                 let instrument = instruments_reader.get_entity("i".into(), &sb_contract.id).await;
@@ -77,7 +77,7 @@ async fn handle_event(mut rx: UnboundedReceiver<(String, String)>, sb_client: Ar
                     continue;
                 }
 
-                let key = format!("{}-{}", lp_name, sb_contract.id);
+                let key = format!("{}-{}", bidask.lp, sb_contract.id);
 
                 let mut serialized_message = Vec::<u8>::new();
                 sb_contract.serialize(serialized_message.as_mut()).unwrap();
@@ -86,7 +86,7 @@ async fn handle_event(mut rx: UnboundedReceiver<(String, String)>, sb_client: Ar
                 match instrument_metrics.get(&key) {
                     Some(metric) => metric.inc(),
                     None => {
-                        let metric_to_insert_into_list = metrics.average_income_to_socket.with_label_values(&[&sb_contract.id, lp_name]);
+                        let metric_to_insert_into_list = metrics.average_income_to_socket.with_label_values(&[&sb_contract.id, &bidask.lp]);
                         metric_to_insert_into_list.inc();
                         instrument_metrics.insert(key, metric_to_insert_into_list.clone());
                     },

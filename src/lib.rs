@@ -5,7 +5,7 @@ mod monitoring;
 mod http;
 mod no_sql;
 
-pub use bid_ask_tcp_client::BidAskTcpServer;
+pub use bid_ask_tcp_client::{BidAskTcpServer, LpBidAsk};
 pub use proto::{BidAskMessage, DateTimeAsMicroseconds, BclDateTime};
 pub use settings::Settings;
 pub use monitoring::Metrics;
