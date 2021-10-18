@@ -10,3 +10,4 @@ pub use proto::{BidAskMessage, DateTimeAsMicroseconds, BclDateTime};
 pub use settings::Settings;
 pub use monitoring::Metrics;
 pub use http::start as http_start;
+pub use no_sql::NoSqlInstrumentModel;

@@ -1,8 +1,8 @@
 use chrono::{NaiveDateTime};
-use my_no_sql_tcp_reader::MyNoSqlTcpConnection;
+use my_no_sql_tcp_reader::{MyNoSqlDataReader, MyNoSqlTcpConnection};
 use my_service_bus_tcp_client::MyServiceBusClient;
 use prometheus::core::{AtomicF64, GenericCounter};
-use quotes_mixer::{BclDateTime, BidAskMessage, BidAskTcpServer, Metrics, Settings, http_start};
+use quotes_mixer::{BclDateTime, BidAskMessage, BidAskTcpServer, Metrics, NoSqlInstrumentModel, Settings, http_start};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use stopwatch::Stopwatch;
 use tokio::{fs, sync::mpsc::UnboundedReceiver};
@@ -13,6 +13,10 @@ const APP_NAME: &str = "rust_price_mixer";
 async fn main() {
     let settings = parse_settings().await;
     let metrics = Arc::new(Metrics::new());
+
+    let mut nosql_client = MyNoSqlTcpConnection::new(settings.no_sql_url,APP_NAME.clone().into());
+    let instruments_reader = nosql_client.get_reader::<NoSqlInstrumentModel>("instruments".into()).await;
+
 
     let bid_ask_servers = settings.lps.iter().map(|lp| {
         return BidAskTcpServer::new(lp.name.clone(), lp.hostport.clone());
@@ -28,11 +32,8 @@ async fn main() {
     );
 
 
-    let ns = MyNoSqlTcpConnection::new(settings.no_sql_url,APP_NAME.clone().into());
-
-    // let instruments 
-
     sb_client.start().await;
+    nosql_client.start();
 
     let client = Arc::new(sb_client);
 
@@ -41,8 +42,9 @@ async fn main() {
 
         let cl_client = client.clone();
         let met = metrics.clone().to_owned();
+        let reader = instruments_reader.clone();
 
-        tokio::task::spawn(async move { handle_event(receiver, cl_client, met).await });
+        tokio::task::spawn(async move { handle_event(receiver, cl_client, met, reader).await });
         tokio::task::spawn(async move { itm.connect().await });
     }
 
@@ -54,7 +56,7 @@ async fn main() {
     }
 }
 
-async fn handle_event(mut rx: UnboundedReceiver<(String, String)>, sb_client: Arc<MyServiceBusClient>, metrics: Arc<Metrics>) {
+async fn handle_event(mut rx: UnboundedReceiver<(String, String)>, sb_client: Arc<MyServiceBusClient>, metrics: Arc<Metrics>, instruments_reader: Arc<MyNoSqlDataReader<NoSqlInstrumentModel>>) {
     loop {
         let sw_process = Stopwatch::start_new();
 
@@ -67,6 +69,13 @@ async fn handle_event(mut rx: UnboundedReceiver<(String, String)>, sb_client: Ar
             if !line.is_ok() && messages.len() <= 100 {
                 let (lp_name, mess) = &line.unwrap();
                 let sb_contract = parse_message(mess);
+
+
+                let instrument = instruments_reader.get_entity("i".into(), &sb_contract.id).await;
+
+                if instrument.is_none() {
+                    continue;
+                }
 
                 let key = format!("{}-{}", lp_name, sb_contract.id);
 
