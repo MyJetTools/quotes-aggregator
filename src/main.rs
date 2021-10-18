@@ -19,7 +19,7 @@ async fn main() {
 
 
     let bid_ask_servers = settings.lps.iter().map(|lp| {
-        return BidAskTcpServer::new(lp.name.clone(), lp.hostport.clone());
+        return BidAskTcpServer::new(lp.hostport.clone(), lp.name.clone());
     })
     .collect::<Vec<BidAskTcpServer>>();
 
