@@ -54,22 +54,22 @@ impl QuotesReader {
 }
 
 pub struct BidAskTcpServer {
-    lp_name: String,
+    lp: String,
     hostport: String,
-    sender: Option<UnboundedSender<String>>
+    sender: Option<UnboundedSender<(String, String)>>,
 }
 
 impl BidAskTcpServer {
-    pub fn new(lp_name: String, hostport: String) -> BidAskTcpServer {
+    pub fn new(hostport: String, lp: String) -> BidAskTcpServer {
         BidAskTcpServer {
-            lp_name: lp_name,
             hostport: hostport,
-            sender: None
+            sender: None,
+            lp: lp
         }
     }
 
-    pub fn subscribe(&mut self) -> UnboundedReceiver<String>{
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    pub fn subscribe(&mut self) -> UnboundedReceiver<(String, String)>{
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<(String, String)>();
         self.sender = Some(tx);
         return rx;
     }
@@ -91,7 +91,7 @@ impl BidAskTcpServer {
                 match reader.read_next().await {
                     Some(messages) => {
                         for mess in messages {
-                            self.sender.as_ref().unwrap().send(mess).unwrap();
+                            self.sender.as_ref().unwrap().send((self.lp.clone() ,mess)).unwrap();
                         }
                     }
                     None => {}
