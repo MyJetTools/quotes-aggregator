@@ -10,11 +10,6 @@ const APP_NAME: &str = "rust_price_mixer";
 
 #[tokio::main]
 async fn main() {
-
-    let mut v = vec![5,25];
-    v.extend(vec![55]);
-    println!("{:?}", v);
-    return;
     let settings = parse_settings().await;
     let metrics = Arc::new(Metrics::new());
 
@@ -77,7 +72,10 @@ async fn handle_event(mut rx: UnboundedReceiver<LpBidAsk>, sb_client: Arc<MyServ
                 let key = format!("{}-{}", bidask.lp, bidask.bidask.id);
                 let mut serialized_message = Vec::<u8>::new();
                 bidask.bidask.serialize(serialized_message.as_mut()).unwrap();
-                messages.push(serialized_message);
+
+                let mut mess_with_splitter = vec![0];
+                mess_with_splitter.extend(serialized_message);
+                messages.push(mess_with_splitter);
 
                 match instrument_metrics.get(&key) {
                     Some(metric) => metric.inc(),
