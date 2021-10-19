@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -10,15 +12,16 @@ pub struct Settings {
     pub sb_url: String,
 
     #[serde(rename = "no_sql_url")]
-    pub no_sql_url: String
+    pub no_sql_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct LpConfig{
+pub struct LpConfig {
     #[serde(rename = "name")]
     pub name: String,
     #[serde(rename = "hostport")]
-    pub hostport: String
-
+    pub hostport: String,
+    #[serde(rename = "instruments")]
+    pub instruments: HashSet<String>,
 }

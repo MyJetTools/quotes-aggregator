@@ -1,8 +1,7 @@
-use chrono::{NaiveDateTime};
 use my_no_sql_tcp_reader::{MyNoSqlDataReader, MyNoSqlTcpConnection};
 use my_service_bus_tcp_client::MyServiceBusClient;
 use prometheus::core::{AtomicF64, GenericCounter};
-use quotes_mixer::{BclDateTime, BidAskMessage, BidAskTcpServer, LpBidAsk, Metrics, NoSqlInstrumentModel, Settings, http_start};
+use quotes_mixer::{BidAskTcpServer, LpBidAsk, Metrics, NoSqlInstrumentModel, Settings, http_start};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use stopwatch::Stopwatch;
 use tokio::{fs, sync::mpsc::UnboundedReceiver};
@@ -17,9 +16,8 @@ async fn main() {
     let mut nosql_client = MyNoSqlTcpConnection::new(settings.no_sql_url,APP_NAME.clone().into());
     let instruments_reader = nosql_client.get_reader::<NoSqlInstrumentModel>("instruments".into()).await;
 
-
     let bid_ask_servers = settings.lps.iter().map(|lp| {
-        return BidAskTcpServer::new(lp.hostport.clone(), lp.name.clone());
+        return BidAskTcpServer::new(lp.hostport.clone(), lp.name.clone(), lp.instruments.clone());
     })
     .collect::<Vec<BidAskTcpServer>>();
 
@@ -30,7 +28,6 @@ async fn main() {
         Duration::new(3, 0),
         Duration::new(3, 0),
     );
-
 
     sb_client.start().await;
     nosql_client.start();
@@ -65,28 +62,23 @@ async fn handle_event(mut rx: UnboundedReceiver<LpBidAsk>, sb_client: Arc<MyServ
 
         loop {
             let bidask = rx.recv().await.unwrap();
-            // !line.is_ok() &&
-            if  messages.len() <= 100 {
-                // let bidask = line.unwrap();
-                let sb_contract = parse_message(&bidask.message);
-
-
-                let instrument = instruments_reader.get_entity("i".into(), &sb_contract.id).await;
+            if  messages.len() <= 1 {
+                let instrument = instruments_reader.get_entity("i".into(), &bidask.bidask.id).await;
 
                 if instrument.is_none() {
                     continue;
                 }
 
-                let key = format!("{}-{}", bidask.lp, sb_contract.id);
-
+                let key = format!("{}-{}", bidask.lp, bidask.bidask.id);
                 let mut serialized_message = Vec::<u8>::new();
-                sb_contract.serialize(serialized_message.as_mut()).unwrap();
+                bidask.bidask.serialize(serialized_message.as_mut()).unwrap();
                 messages.push(serialized_message);
 
                 match instrument_metrics.get(&key) {
                     Some(metric) => metric.inc(),
                     None => {
-                        let metric_to_insert_into_list = metrics.average_income_to_socket.with_label_values(&[&sb_contract.id, &bidask.lp]);
+                        let metric_to_insert_into_list = 
+                            metrics.average_income_to_socket.with_label_values(&[&bidask.bidask.id, &bidask.lp]);
                         metric_to_insert_into_list.inc();
                         instrument_metrics.insert(key, metric_to_insert_into_list.clone());
                     },
@@ -114,22 +106,6 @@ async fn handle_event(mut rx: UnboundedReceiver<LpBidAsk>, sb_client: Arc<MyServ
         println!("Publish took {}ms", single_quote.elapsed_ms());
         println!("Total took {}ms", sw_process.elapsed_ms());
     }
-}
-
-fn parse_message(mess: &String) -> BidAskMessage {
-    let message = mess.split(" ").collect::<Vec<&str>>();
-
-    BidAskMessage {
-        id: message[0].into(),
-        datetime: Some(parse_date(message[3].into())),
-        bid: message[1].parse::<f64>().unwrap(),
-        ask: message[2].parse::<f64>().unwrap(),
-    }
-}
-
-fn parse_date(str: String) -> BclDateTime {
-    let date = NaiveDateTime::parse_from_str(&str, "%Y%m%d%H%M%S%3f").unwrap();
-    return BclDateTime::from_miliseconds(date.timestamp_millis());
 }
 
 async fn parse_settings() -> Settings{
