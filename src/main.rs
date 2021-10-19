@@ -10,6 +10,11 @@ const APP_NAME: &str = "rust_price_mixer";
 
 #[tokio::main]
 async fn main() {
+
+    let mut v = vec![5,25];
+    v.extend(vec![55]);
+    println!("{:?}", v);
+    return;
     let settings = parse_settings().await;
     let metrics = Arc::new(Metrics::new());
 
