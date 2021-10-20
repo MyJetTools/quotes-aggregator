@@ -73,7 +73,7 @@ async fn handle_event(mut rx: UnboundedReceiver<LpBidAsk>, sb_client: Arc<MyServ
                 let mut serialized_message = Vec::<u8>::new();
                 bidask.bidask.serialize(serialized_message.as_mut()).unwrap();
 
-                let mut mess_with_splitter = vec![0];
+                let mut mess_with_splitter = vec![1];
                 mess_with_splitter.extend(serialized_message);
                 messages.push(mess_with_splitter);
 

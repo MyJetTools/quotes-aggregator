@@ -5,7 +5,7 @@ use tokio::io::{self, AsyncReadExt, ReadHalf};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use crate::{BclDateTime, BidAskMessage};
+use crate::{BidAskMessage};
 
 pub struct QuotesReader {
     reader: ReadHalf<TcpStream>,
@@ -137,13 +137,13 @@ fn parse_message(mess: &String) -> BidAskMessage {
 
     BidAskMessage {
         id: message[0].into(),
-        datetime: Some(parse_date(message[3].into())),
+        datetime: parse_date(message[3].into()),
         bid: message[1].parse::<f64>().unwrap(),
         ask: message[2].parse::<f64>().unwrap(),
     }
 }
 
-fn parse_date(str: String) -> BclDateTime {
+fn parse_date(str: String) -> i64 {
     let date = NaiveDateTime::parse_from_str(&str, "%Y%m%d%H%M%S%3f").unwrap();
-    return BclDateTime::from_miliseconds(date.timestamp_millis());
+    return date.timestamp_millis();
 }

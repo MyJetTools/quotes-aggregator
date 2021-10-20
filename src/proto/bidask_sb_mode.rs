@@ -1,13 +1,11 @@
 use prost::{DecodeError, EncodeError};
 
-use super::BclDateTime;
-
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BidAskMessage {
     #[prost(string, tag = "1")]
     pub id: String,
-    #[prost(message, tag = "2")]
-    pub datetime: Option<BclDateTime>,
+    #[prost(int64, tag = "2")]
+    pub datetime: i64,
     #[prost(double, tag = "3")]
     pub bid: f64,
     #[prost(double, tag = "4")]
