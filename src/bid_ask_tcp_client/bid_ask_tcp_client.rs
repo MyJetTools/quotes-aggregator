@@ -61,7 +61,7 @@ impl BidAskTcpServer {
                 match reader.read_next().await {
                     Some(messages) => {
                         for mess in messages {
-                            let sb_contract = BidAskMessage::parse_message_v1(&mess);
+                            let sb_contract = BidAskMessageV2::parse_message_v2(&mess);
 
                             if !self.instruments_to_handle.contains(&sb_contract.id) {
                                 continue;
