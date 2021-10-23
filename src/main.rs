@@ -17,7 +17,7 @@ async fn main() {
     let instruments_reader = nosql_client.get_reader::<NoSqlInstrumentModel>("instruments".into()).await;
 
     let bid_ask_servers = settings.lps.iter().map(|lp| {
-        return BidAskTcpServer::new(lp.hostport.clone(), lp.name.clone(), lp.instruments.clone());
+        return BidAskTcpServer::new(lp.hostport.clone(), lp.name.clone(), lp.instruments.clone(), 0);
     })
     .collect::<Vec<BidAskTcpServer>>();
 
@@ -73,7 +73,7 @@ async fn handle_event(mut rx: UnboundedReceiver<LpBidAsk>, sb_client: Arc<MyServ
                 let mut serialized_message = Vec::<u8>::new();
                 bidask.bidask.serialize(serialized_message.as_mut()).unwrap();
 
-                let mut mess_with_splitter = vec![1];
+                let mut mess_with_splitter = vec![0];
                 mess_with_splitter.extend(serialized_message);
                 messages.push(mess_with_splitter);
 
