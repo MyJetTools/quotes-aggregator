@@ -13,8 +13,8 @@ pub struct BclDateTime {
 impl BclDateTime {
     pub fn from_miliseconds(timestamp: i64) -> BclDateTime{
         BclDateTime {
-            value: timestamp * 500,
-            scale: 3,
+            value: timestamp / 20,
+            scale: 5,
             kind: 0,
         }
     }
