@@ -14,7 +14,7 @@ impl BclDateTime {
     pub fn from_miliseconds(timestamp: i64) -> BclDateTime{
         BclDateTime {
             value: timestamp * 500,
-            scale: 4,
+            scale: 3,
             kind: 0,
         }
     }
