@@ -10,4 +10,4 @@ pub use proto::{BidAskMessage, BidAskMessageV2, UnfilteredBidAskMessageV2, Unfil
 pub use settings::Settings;
 pub use monitoring::Metrics;
 pub use http::start as http_start;
-pub use no_sql::NoSqlInstrumentModel;
+pub use no_sql::{NoSqlInstrumentModel, NoSqlDefaultValue};

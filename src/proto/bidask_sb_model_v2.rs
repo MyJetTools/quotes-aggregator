@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use prost::{DecodeError, EncodeError};
 
-use crate::BclDateTime;
+use crate::{BclDateTime, UnfilteredBidAskMessage};
 
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BidAskMessageV2 {
@@ -22,6 +22,25 @@ impl BidAskMessageV2 {
 
     pub fn serialize(&self, dest: &mut Vec<u8>) -> Result<(), EncodeError> {
         prost::Message::encode(self, dest)
+    }
+
+    pub fn serialize_to_vec(&self) -> Vec<u8>{
+        let mut serialized_message = Vec::<u8>::new();
+        self.serialize(serialized_message.as_mut()).unwrap();
+        return serialized_message;
+    }
+
+    pub fn make_unfiltered(&self, lp: String) -> UnfilteredBidAskMessageV2{
+
+        let unfiltered = UnfilteredBidAskMessageV2{
+            id: self.id.clone(),
+            datetime: self.datetime,
+            bid: self.bid,
+            ask: self.ask,
+            source: lp,
+        };
+
+        return unfiltered;
     }
 
 
@@ -59,6 +78,12 @@ impl UnfilteredBidAskMessageV2 {
 
     pub fn serialize(&self, dest: &mut Vec<u8>) -> Result<(), EncodeError> {
         prost::Message::encode(self, dest)
+    }
+
+    pub fn serialize_to_vec(&self) -> Vec<u8>{
+        let mut serialized_message = Vec::<u8>::new();
+        self.serialize(serialized_message.as_mut()).unwrap();
+        return serialized_message;
     }
 
 }
