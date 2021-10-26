@@ -90,7 +90,6 @@ async fn handle_event(
     defaults_reader: Arc<MyNoSqlDataReader<NoSqlDefaultValue>>,
 ) {
     loop {
-        let sw_process = Stopwatch::start_new();
 
         let mut instrument_metrics: HashMap<String, GenericCounter<AtomicF64>> = HashMap::new();
 

@@ -30,7 +30,6 @@ impl BidAskTcpServer {
             lp: lp,
             instruments_to_handle: instruments_to_handle,
             contract_version: sb_contract_version
-
         }
     }
 
@@ -47,7 +46,7 @@ impl BidAskTcpServer {
             panic!("Not found subscriber for socket.");
         }
 
-        loop {
+        'connect_loop: loop {
             let socket = TcpStream::connect(self.hostport.as_str())
                 .await
                 .expect(&format!(
@@ -68,7 +67,18 @@ impl BidAskTcpServer {
                             }
 
                             let message = LpBidAsk::new(self.lp.clone(), sb_contract);
-                            self.sender.as_ref().unwrap().send(message).unwrap();
+                            match self.sender.as_ref() {
+                                Some(sender) => {
+                                    match sender.send(message) {
+                                        Ok(_) => {},
+                                        Err(_) => {
+                                            println!("Cant send to channel - reconect");
+                                            continue 'connect_loop;
+                                        },
+                                    }
+                                },
+                                None => panic!("Somehow no sender."),
+                            }
                         }
                     }
                     None => {}
