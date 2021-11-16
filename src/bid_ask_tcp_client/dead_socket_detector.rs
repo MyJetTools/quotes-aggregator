@@ -17,7 +17,7 @@ impl DeadSocketDetector {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_micros() as i64;
+            .as_millis() as i64;
 
         DeadSocketDetector {
             last_success_mess_unix_ms: AtomicI64::new(timestamp),
@@ -25,11 +25,21 @@ impl DeadSocketDetector {
         }
     }
 
+    pub fn reset(&self) {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64;
+
+        self.last_success_mess_unix_ms
+            .store(timestamp, Ordering::SeqCst);
+    }
+
     pub fn track_event(&self) {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_micros() as i64;
+            .as_millis() as i64;
 
         self.last_success_mess_unix_ms
             .store(timestamp, Ordering::SeqCst);
@@ -39,7 +49,7 @@ impl DeadSocketDetector {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_micros() as i64;
+            .as_millis() as i64;
 
         let timeout_sec = (timestamp - self.last_success_mess_unix_ms.load(Ordering::SeqCst)) / 100;
         if timeout_sec > self.timeout_sec.into() {

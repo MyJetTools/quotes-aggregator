@@ -39,7 +39,8 @@ impl BidAskTcpClient {
 pub async fn start_bid_ask_client(client: Arc<BidAskTcpClient>) -> QuotesReader {
     loop {
         let client_clone = client.clone();
-
+        sleep(Duration::from_secs(3)).await;
+        client.dead_socket_detector.reset();
         println!(
             "Tcp connect. Hostport: {}. Lp: {}",
             client_clone.hostport, client_clone.lp
