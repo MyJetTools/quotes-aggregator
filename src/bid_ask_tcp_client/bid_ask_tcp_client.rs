@@ -80,7 +80,7 @@ pub async fn start_dead_socket_detector(client: Arc<BidAskTcpClient>) {
         let socket_status = client.dead_socket_detector.is_timeout();
         sleep(Duration::from_secs(3)).await;
 
-        match socket_status {
+        let result = match socket_status {
             super::dead_socket_detector::SocketTimeoutStatus::Ok => break,
             super::dead_socket_detector::SocketTimeoutStatus::Timeout(timeout) => {
                 println!(
@@ -90,7 +90,10 @@ pub async fn start_dead_socket_detector(client: Arc<BidAskTcpClient>) {
 
                 break;
             }
-        }
+        };
+
+
+        continue;
     }
 }
 
