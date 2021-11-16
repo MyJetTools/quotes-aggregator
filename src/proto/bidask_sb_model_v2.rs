@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use prost::{DecodeError, EncodeError};
 
-use crate::{BclDateTime, UnfilteredBidAskMessage};
+use crate::{BclDateTime};
 
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BidAskMessageV2 {

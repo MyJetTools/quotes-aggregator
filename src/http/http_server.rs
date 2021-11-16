@@ -2,7 +2,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use hyper::{Body, Method, Request, Response, Server, StatusCode, service::{make_service_fn, service_fn}};
 
-use crate::Metrics;
+use crate::{AppContext, Metrics};
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type Result<T> = std::result::Result<T, GenericError>;
@@ -25,9 +25,9 @@ async fn response(
     }
 }
 
-pub async fn start(addr: SocketAddr, metrics: Arc<Metrics>) {
+pub async fn start(addr: SocketAddr, app_ctx: Arc<AppContext>) {
     let new_service = make_service_fn(move |_| {
-        let metrics = metrics.clone();
+        let metrics = app_ctx.metrics.clone();
         async {
 
             Ok::<_, GenericError>(service_fn(move |req| {

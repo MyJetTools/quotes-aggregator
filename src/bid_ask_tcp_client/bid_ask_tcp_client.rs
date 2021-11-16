@@ -1,88 +1,130 @@
 use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Duration;
 
 use tokio::io::{self};
 use tokio::net::TcpStream;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::time::sleep;
 
-use crate::{BidAskMessage, BidAskMessageV2, LpBidAsk};
+use crate::{send_bid_ask, AppContext, BidAskMessage, LpBidAsk};
 
+use super::dead_socket_detector::{DeadSocketDetector};
 use super::QuotesReader;
 
-pub struct BidAskTcpServer {
-    lp: String,
-    hostport: String,
-    sender: Option<UnboundedSender<LpBidAsk>>,
+pub struct BidAskTcpClient {
+    app: Arc<AppContext>,
     instruments_to_handle: HashSet<String>,
-    contract_version: u8
+    lp: String,
+    dead_socket_detector: Arc<DeadSocketDetector>,
+    hostport: String,
 }
 
-
-impl BidAskTcpServer {
+impl BidAskTcpClient {
     pub fn new(
+        app: Arc<AppContext>,
         hostport: String,
         lp: String,
         instruments_to_handle: HashSet<String>,
-        sb_contract_version: u8
-    ) -> BidAskTcpServer {
-        BidAskTcpServer {
-            hostport: hostport,
-            sender: None,
-            lp: lp,
+    ) -> BidAskTcpClient {
+        BidAskTcpClient {
+            app: app,
             instruments_to_handle: instruments_to_handle,
-            contract_version: sb_contract_version
+            lp,
+            dead_socket_detector: Arc::new(DeadSocketDetector::new(9)),
+            hostport,
         }
     }
+}
 
-    pub fn subscribe(&mut self) -> UnboundedReceiver<LpBidAsk> {
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<LpBidAsk>();
-        self.sender = Some(tx);
-        return rx;
+pub async fn start_bid_ask_client(client: Arc<BidAskTcpClient>) -> QuotesReader {
+    loop {
+        let client_clone = client.clone();
+
+        println!(
+            "Tcp connect. Hostport: {}. Lp: {}",
+            client_clone.hostport, client_clone.lp
+        );
+
+        let socket = TcpStream::connect(client_clone.hostport.as_str())
+            .await
+            .expect(&format!(
+                "Cant connect to lp socket into: {}",
+                &client_clone.hostport
+            ));
+        let (rd, _) = io::split(socket);
+        let mut reader = QuotesReader::new(rd);
+
+
+        let reed_loop_client = client_clone.clone();
+        tokio::task::spawn(async move {
+            read_loop(
+                reed_loop_client.app.clone(),
+                reed_loop_client.instruments_to_handle.clone(),
+                reed_loop_client.lp.clone(),
+                &mut reader,
+                reed_loop_client.dead_socket_detector.clone()
+            )
+            .await;
+        });
+
+        tokio::task::spawn(start_dead_socket_detector(client_clone.clone()));
+
+
     }
+}
 
-    pub async fn connect(&mut self) -> QuotesReader {
-        println!("Tcp connect");
+pub async fn start_dead_socket_detector(client: Arc<BidAskTcpClient>) {
+    loop {
 
-        if self.sender.is_none() {
-            panic!("Not found subscriber for socket.");
+        let socket_status = client.dead_socket_detector.is_timeout();
+        sleep(Duration::from_secs(3)).await;
+
+        match socket_status {
+            super::dead_socket_detector::SocketTimeoutStatus::Ok => break,
+            super::dead_socket_detector::SocketTimeoutStatus::Timeout(timeout) => {
+                println!(
+                    "Long time no message from lp: {}. Timeout: {}, Disconect....",
+                    client.lp, timeout
+                );
+
+                break;
+            }
         }
+    }
+}
 
-        'connect_loop: loop {
-            let socket = TcpStream::connect(self.hostport.as_str())
-                .await
-                .expect(&format!(
-                    "Cant connect to lp socket into: {}",
-                    &self.hostport
-                ));
-            let (rd, _) = io::split(socket);
-            let mut reader = QuotesReader::new(rd);
+pub async fn read_loop(
+    app: Arc<AppContext>,
+    instruments_to_handle: HashSet<String>,
+    lp: String,
+    reader: &mut QuotesReader,
+    dead_socket_detector: Arc<DeadSocketDetector>
+) {
+    loop {
+        match reader.read_next().await {
+            Some(messages) => {
+                for mess in messages {
+                    let sb_contract = BidAskMessage::parse_message_v1(&mess);
 
-            loop {
-                match reader.read_next().await {
-                    Some(messages) => {
-                        for mess in messages {
-                            let sb_contract = BidAskMessageV2::parse_message_v2(&mess);
+                    if !instruments_to_handle.contains(&sb_contract.id) {
+                        continue;
+                    }
 
-                            if !self.instruments_to_handle.contains(&sb_contract.id) {
-                                continue;
-                            }
+                    let message = LpBidAsk::new(lp.clone(), sb_contract);
 
-                            let message = LpBidAsk::new(self.lp.clone(), sb_contract);
-                            match self.sender.as_ref() {
-                                Some(sender) => {
-                                    match sender.send(message) {
-                                        Ok(_) => {},
-                                        Err(_) => {
-                                            println!("Cant send to channel - reconect");
-                                            continue 'connect_loop;
-                                        },
-                                    }
-                                },
-                                None => panic!("Somehow no sender."),
-                            }
+                    let publish_result = send_bid_ask(app.as_ref(), message).await;
+
+                    match publish_result {
+                        Ok(_) => { dead_socket_detector.track_event() }
+                        Err(err) => {
+                            println!("Cant publish bid ask. Break cycle. Lp: {}. Err: {:?}", lp, err.get_text());
+                            break;
                         }
                     }
-                    None => {}
                 }
+            }
+            None => {
+                println!("Somehow no message. Write to statistic. Lp: {}", lp)
             }
         }
     }
