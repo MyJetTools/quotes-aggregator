@@ -68,9 +68,7 @@ pub async fn start_bid_ask_client(client: Arc<BidAskTcpClient>) -> QuotesReader 
             .await;
         });
 
-        tokio::task::spawn(start_dead_socket_detector(client_clone.clone()));
-
-
+        start_dead_socket_detector(client_clone.clone()).await;
     }
 }
 
