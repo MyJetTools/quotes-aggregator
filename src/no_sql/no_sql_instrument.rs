@@ -8,6 +8,8 @@ pub struct NoSqlInstrumentModel {
     pub id: String,
     #[serde(rename = "TimeStamp")]
     pub time_stamp: String,
+    #[serde(rename = "Ticker")]
+    pub ticker: String
 }
 
 impl MyNoSqlEntity for NoSqlInstrumentModel {
@@ -22,4 +24,5 @@ impl MyNoSqlEntity for NoSqlInstrumentModel {
     fn get_time_stamp(&self) -> i64 {
         self.time_stamp.parse::<i64>().unwrap()
     }
+    
 }

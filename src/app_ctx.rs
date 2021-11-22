@@ -3,15 +3,14 @@ use std::{sync::Arc, time::Duration};
 use my_no_sql_tcp_reader::MyNoSqlTcpConnection;
 use my_service_bus_tcp_client::MyServiceBusClient;
 
-use crate::{
-    no_sql::NoSqlInstrumentReader, Metrics, NoSqlInstrumentModel, SbPublusher, Settings,
-};
+use crate::{Metrics, NoSqlInstrumentModel, SbPublusher, Settings, no_sql::{MyNoSqlTickerReader, NoSqlInstrumentReader}};
 
 const APP_NAME: &str = "rust_price_mixer";
 
 pub struct AppContext {
     pub settings: Arc<Settings>,
     pub instruments_reader: Option<NoSqlInstrumentReader>,
+    pub tickers_reader: Option<MyNoSqlTickerReader>,
     pub metrics: Arc<Metrics>,
     pub unfiltered_bid_ask_publisher: Option<SbPublusher>,
     pub bid_ask_publisher: Option<SbPublusher>,
@@ -25,6 +24,7 @@ impl AppContext {
             metrics: Arc::new(Metrics::new()),
             unfiltered_bid_ask_publisher: None,
             bid_ask_publisher: None,
+            tickers_reader: None
         }
     }
 

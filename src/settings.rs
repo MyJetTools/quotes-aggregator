@@ -24,4 +24,6 @@ pub struct LpConfig {
     pub hostport: String,
     #[serde(rename = "instruments")]
     pub instruments: HashSet<String>,
+    #[serde(rename = "lpSecTimeout")]
+    pub lp_secs_timeout: String,
 }

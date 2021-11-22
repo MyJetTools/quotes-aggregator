@@ -6,7 +6,8 @@ use tokio::io::{self};
 use tokio::net::TcpStream;
 use tokio::time::sleep;
 
-use crate::{send_bid_ask, AppContext, BidAskMessage, LpBidAsk};
+use crate::bid_ask_process::{process_bid_ask, process_ticker};
+use crate::{AppContext, BidAskMessage, LpBidAsk};
 
 use super::dead_socket_detector::{DeadSocketDetector};
 use super::QuotesReader;
@@ -56,6 +57,7 @@ pub async fn start_bid_ask_client(client: Arc<BidAskTcpClient>) -> QuotesReader 
         let mut reader = QuotesReader::new(rd);
 
 
+
         let reed_loop_client = client_clone.clone();
         tokio::task::spawn(async move {
             read_loop(
@@ -80,8 +82,8 @@ pub async fn start_dead_socket_detector(client: Arc<BidAskTcpClient>) {
         let socket_status = client.dead_socket_detector.is_timeout();
         sleep(Duration::from_secs(3)).await;
 
-        let result = match socket_status {
-            super::dead_socket_detector::SocketTimeoutStatus::Ok => break,
+        match socket_status {
+            super::dead_socket_detector::SocketTimeoutStatus::Ok => {},
             super::dead_socket_detector::SocketTimeoutStatus::Timeout(timeout) => {
                 println!(
                     "Long time no message from lp: {}. Timeout: {}, Disconect....",
@@ -91,9 +93,6 @@ pub async fn start_dead_socket_detector(client: Arc<BidAskTcpClient>) {
                 break;
             }
         };
-
-
-        continue;
     }
 }
 
@@ -116,7 +115,7 @@ pub async fn read_loop(
 
                     let message = LpBidAsk::new(lp.clone(), sb_contract);
 
-                    let publish_result = send_bid_ask(app.as_ref(), message).await;
+                    let publish_result = process_ticker(app.as_ref(), message).await;
 
                     match publish_result {
                         Ok(_) => { dead_socket_detector.track_event() }

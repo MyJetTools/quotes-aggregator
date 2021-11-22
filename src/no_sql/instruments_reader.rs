@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use my_no_sql_tcp_reader::MyNoSqlDataReader;
 
@@ -19,6 +19,12 @@ impl NoSqlInstrumentReader {
         let instrument = self.reader
             .get_entity("i".into(), id)
         .await;
+
+        return instrument;
+    }
+
+    pub async fn get_all(&self) -> Option<BTreeMap<String, Arc<NoSqlInstrumentModel>>>{
+        let instrument = self.reader.get_by_partition_key("i".into()).await;
 
         return instrument;
     }

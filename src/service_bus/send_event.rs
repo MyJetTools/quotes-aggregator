@@ -1,21 +1,17 @@
-use crate::{AppContext, BidAskMessage, LpBidAsk, UnfilteredBidAskMessage};
+use crate::{AppContext, BidAskMessage, LpBidAsk, ProcessBidAskError, UnfilteredBidAskMessage};
 
 
-pub enum SendBidAskError {
-    Ok,
-    PublishError(String)
-}
-
-impl SendBidAskError {
+impl ProcessBidAskError {
     pub fn get_text(&self) -> String{
         match self {
-            SendBidAskError::Ok => "Ok".into(),
-            SendBidAskError::PublishError(ms) => format!("Timeout: {} ms", ms),
+            ProcessBidAskError::Ok => "Ok".into(),
+            ProcessBidAskError::TickerOrInstrumentNotFound => "ticker not found".into(),
+            ProcessBidAskError::PublishError(ms) => format!("Timeout: {} ms", ms),
         }
     }
 }
 
-pub async fn send_bid_ask(app: &AppContext, bidask: LpBidAsk) -> Result<(), SendBidAskError> {
+pub async fn send_bid_ask(app: &AppContext, bidask: LpBidAsk) -> Result<(), ProcessBidAskError> {
     loop {
 
         app.metrics
@@ -32,7 +28,7 @@ pub async fn send_bid_ask(app: &AppContext, bidask: LpBidAsk) -> Result<(), Send
 
 
         if unfiltered_publish_result.is_err() {
-            return Err(SendBidAskError::PublishError("Cant publish to unfiltered bid ask".into()));
+            return Err(ProcessBidAskError::PublishError("Cant publish to unfiltered bid ask".into()));
         }
 
         let instrument = app
@@ -55,7 +51,7 @@ pub async fn send_bid_ask(app: &AppContext, bidask: LpBidAsk) -> Result<(), Send
 
             return match publish_result {
                 Ok(_) => Ok(()),
-                Err(err) => Err(SendBidAskError::PublishError(err)),
+                Err(err) => Err(ProcessBidAskError::PublishError(err)),
             }
 
     }
